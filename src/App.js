@@ -284,7 +284,6 @@ function App() {
             <h2 className="panel-title">Your QR Code</h2>
             {shareUrl ? (
               <div className="qr-section">
-                <div className="qr-badge">✅ Ready to Share</div>
                 <div className="qr-wrapper" ref={qrRef}>
                   <QRCodeCanvas value={shareUrl} size={200} level="H" includeMargin />
                 </div>
@@ -294,18 +293,21 @@ function App() {
                   <button className="copy-btn" onClick={() => navigator.clipboard.writeText(shareUrl)}>Copy</button>
                 </div>
                 <div className="action-btns">
-                  <button className="btn-share" onClick={() => {
-                    if (navigator.share) {
-                      navigator.share({
-                        title: 'DocQR - Merged Document',
-                        text: 'Scan this link to open the merged PDF',
-                        url: shareUrl
-                      });
-                    } else {
-                      navigator.clipboard.writeText(shareUrl);
-                      alert('Link copied to clipboard!');
-                    }
-                  }}>📤 Share</button>
+                  <button className="btn-share" onClick={async () => {
+                    const canvas = qrRef.current?.querySelector('canvas');
+                    if (!canvas) return;
+                    canvas.toBlob(async (blob) => {
+                      const file = new File([blob], 'qr-code.png', { type: 'image/png' });
+                      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], title: 'DocQR', text: 'Scan to open merged PDF' });
+                      } else if (navigator.share) {
+                        await navigator.share({ title: 'DocQR', url: shareUrl });
+                      } else {
+                        navigator.clipboard.writeText(shareUrl);
+                        alert('Link copied!');
+                      }
+                    }, 'image/png');
+                  }}>📤</button>
                   <button className="btn-green" onClick={downloadQR}>⬇️ Download QR</button>
                   <button className="btn-red" onClick={clearQR}>🗑️ Clear</button>
                 </div>
