@@ -428,7 +428,21 @@ body {
 }
 .copy-btn:hover { opacity: 0.85; }
 
-.action-btns { display: flex; gap: 10px; }
+.action-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.btn-share {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: linear-gradient(135deg, #6c63ff, #764ba2);
+  color: white;
+}
+.btn-share:hover { opacity: 0.88; transform: translateY(-1px); }
 
 .btn-green, .btn-red {
   flex: 1;
