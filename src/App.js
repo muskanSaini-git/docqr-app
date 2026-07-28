@@ -35,9 +35,11 @@ function App() {
 
   // Handle PDF file upload
   const handleFileChange = (e) => {
-    const pdfs = Array.from(e.target.files).filter(f => f.type === 'application/pdf');
-    if (pdfs.length === 0) { setError('Only PDF files are supported here. Use camera for images.'); return; }
-    setFiles(prev => [...prev, ...pdfs]);
+    const accepted = Array.from(e.target.files).filter(f => 
+      f.type === 'application/pdf' || f.type.startsWith('image/')
+    );
+    if (accepted.length === 0) { setError('Only PDF and image files are supported.'); return; }
+    setFiles(prev => [...prev, ...accepted]);
     setError('');
     e.target.value = '';
   };
@@ -95,10 +97,18 @@ function App() {
     try {
       const mergedPdf = await PDFDocument.create();
       for (const file of files) {
-        const bytes = await file.arrayBuffer();
-        const pdf = await PDFDocument.load(bytes);
-        const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-        pages.forEach(p => mergedPdf.addPage(p));
+        if (file.type === 'application/pdf') {
+          const bytes = await file.arrayBuffer();
+          const pdf = await PDFDocument.load(bytes);
+          const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+          pages.forEach(p => mergedPdf.addPage(p));
+        } else if (file.type.startsWith('image/')) {
+          const pdfFile = await imageToPdf(file);
+          const bytes = await pdfFile.arrayBuffer();
+          const pdf = await PDFDocument.load(bytes);
+          const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+          pages.forEach(p => mergedPdf.addPage(p));
+        }
       }
       const blob = new Blob([await mergedPdf.save()], { type: 'application/pdf' });
       const formData = new FormData();
@@ -195,14 +205,16 @@ function App() {
                 onDrop={e => {
                   e.preventDefault();
                   setDragOver(false);
-                  const pdfs = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
-                  setFiles(prev => [...prev, ...pdfs]);
+                  const accepted = Array.from(e.dataTransfer.files).filter(f =>
+                    f.type === 'application/pdf' || f.type.startsWith('image/')
+                  );
+                  setFiles(prev => [...prev, ...accepted]);
                 }}
               >
                 <div className="drop-icon">📁</div>
-                <p className="drop-title">Upload PDF</p>
-                <p className="drop-sub">Click or drag & drop</p>
-                <input ref={fileInputRef} type="file" accept="application/pdf" multiple style={{ display: 'none' }} onChange={handleFileChange} />
+                <p className="drop-title">Upload File</p>
+                <p className="drop-sub">PDF or Image</p>
+                <input ref={fileInputRef} type="file" accept="application/pdf,image/*" multiple style={{ display: 'none' }} onChange={handleFileChange} />
               </div>
 
               {/* Camera Scan */}
@@ -242,7 +254,9 @@ function App() {
                   {files.map((file, i) => (
                     <li key={i} className="file-item">
                       <div className="file-info">
-                        <span className="file-icon">{file.name.startsWith('scan-') ? '📷' : '📄'}</span>
+                        <span className="file-icon">
+                          {file.type.startsWith('image/') ? '🖼️' : file.name.startsWith('scan-') ? '📷' : '📄'}
+                        </span>
                         <div>
                           <p className="file-name">{file.name.startsWith('scan-') ? `Scanned Page ${i + 1}` : file.name}</p>
                           <p className="file-size">{formatSize(file.size)}</p>
